@@ -1,0 +1,308 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Asteroids In HTML5</title>
+    <script type="text/javascript">
+        window.onload = init;
+        window.addEventListener('keydown', KeyListener, true);
+
+         //Global Context for canvas
+        var ctx;
+
+         //Game variables
+        var Score = 0;
+        var Lives = 3;
+        var isGameOver = false;
+        var asteroids = new Array();
+        var missiles = new Array();
+
+        var ShipRotation = 0,
+            ShipX = 450,
+            ShipY = 300,
+            ShipVelocity = 0,
+            Shield = false;
+
+         //Image Paths
+        var ShipON_Path = 'img/ship-on.png',
+            ShipOFF_Path = 'img/ship-off.png';
+        var Asteroid_Path = 'img/asteroid.png',
+            Missile_Path = 'img/missile.png';
+
+        function init() //Called on start up to initialise and run the game
+         {
+            //Define Canvas and set background
+            var c = document.getElementById("PlayingField");
+            ctx = c.getContext("2d");
+            ctx.fillStyle = "Black";
+            ctx.fillRect(0, 0, 900, 600);
+
+            //Create asteroids
+            for (var i = 0; i < 3; i++) {
+                asteroid = {
+                    xPos: Math.floor((Math.random() * 900) + 1),
+                    yPos: Math.floor((Math.random() * 600) + 1),
+                    Length: 80,
+                    Width: 80,
+                    angle: Math.floor((Math.random() * 360) + 1)
+                }; //Generate an asteroid with a random X, Y and angle
+
+                asteroids[i] = asteroid;
+            }
+
+            //Call the update to continue the game
+            update();
+        }
+
+        function update() //Checks to see if the game is still in a playing state, updates 'auto' element positions, checks for collisions, monitors for leaving the border
+         {
+            //Iterate through asteroid
+            for (var i = 0; i < asteroids.length; i++) {
+                var temp_asteroid = asteroids[i];
+
+                temp_asteroid.xPos += 5 + Math.sin(temp_asteroid.angle * Math.PI / 180);
+                temp_asteroid.yPos -= 5 + Math.cos(temp_asteroid.angle * Math.PI / 180);
+            }
+
+            //Asteroid Collision
+            for (var i = 0; i < asteroids.length; i++) {
+                var collision_asteroid = asteroids[i];
+                var ship_obj = {
+                    xPos: ShipX,
+                    yPos: ShipY,
+                    Width: 30,
+                    Length: 30,
+                };
+
+                if (collision_asteroid.xPos < ship_obj.xPos + ship_obj.Width && collision_asteroid.xPos + collision_asteroid.Width > ship_obj.xPos && collision_asteroid.yPos < ship_obj.yPos + ship_obj.Length && collision_asteroid.yPos + collision_asteroid.Length > ship_obj.yPos) {
+                    if (!Shield) {
+                        alert("The SS Triangle Died");
+                        Lives--;
+                        Shield = true;
+                        if (Lives <= 0) {
+                            isGameOver = true;
+                            alert("Game Over");
+                        }
+                        setTimeout(function () {
+                            Shield = false
+                        }, 3000); //Turns the shield off after 3 seconds
+                    }
+                }
+            }
+
+            //Iterate through "missile"			
+            for (var i = 0; i < missiles.length; i++) {
+                var temp_missile = missiles[i];
+                temp_missile.xPos += 20 * Math.sin(temp_missile.Angle * Math.PI / 180);
+                temp_missile.yPos -= 20 * Math.cos(temp_missile.Angle * Math.PI / 180);
+            }
+
+            //Ship Velocity Control
+            ShipX += ShipVelocity * Math.sin(ShipRotation * Math.PI / 180);
+            ShipY -= ShipVelocity * Math.cos(ShipRotation * Math.PI / 180);
+            if (ShipVelocity >= 0) {
+                ShipVelocity -= 0.5;
+            } else {
+                ShipVelocity = 0;
+            }
+
+            //Watch border for ship
+            if (ShipY < -20) {
+                ShipY = 600;
+            } else if (ShipY > 610) {
+                ShipY = -10;
+            } else if (ShipX < -20) {
+                ShipX = 900;
+            } else if (ShipX > 910) {
+                ShipX = -10;
+            }
+
+            //Watch border for asteroids
+            for (var i = 0; i < asteroids.length; i++) {
+                var temp_asteroid = asteroids[i];
+
+                if (temp_asteroid.yPos < -20) {
+                    temp_asteroid.yPos = 600;
+                } else if (temp_asteroid.yPos > 610) {
+                    temp_asteroid.yPos = -10;
+                } else if (temp_asteroid.xPos < -20) {
+                    temp_asteroid.xPos = 900;
+                } else if (temp_asteroid.xPos > 910) {
+                    temp_asteroid.xPos = -10;
+                }
+            }
+
+            //Watch border for missiles
+            //Destroy missiles that go outside boundaries
+            for (var i = 0; i < missiles.length; i++) {
+                var temp_missile = missiles[i];
+
+                if (temp_missile.yPos < -20) {
+                    missiles.splice(i, 1);
+                } else if (temp_missile.yPos > 610) {
+                    missiles.splice(i, 1);
+                } else if (temp_missile.xPos < -20) {
+                    missiles.splice(i, 1);
+                } else if (temp_missile.xPos > 910) {
+                    missiles.splice(i, 1);
+                }
+            }
+
+            //Asteroid Missile Collision
+            for (var i = 0; i < asteroids.length; i++) {
+                var temp_asteroid = asteroids[i];
+
+                for (var ii = 0; ii < missiles.length; ii++) {
+                    var temp_missile = missiles[ii];
+
+                    if (temp_asteroid.xPos < temp_missile.xPos + 7 && temp_asteroid.xPos + temp_asteroid.Width > temp_missile.xPos && temp_asteroid.yPos < temp_missile.yPos + 7 && temp_asteroid.yPos + temp_asteroid.Length > temp_missile.yPos) {
+
+                        if (temp_asteroid.Width == 80) {
+                            temp_asteroid.Length = 40; //Shrink large asteroid
+                            temp_asteroid.Width = 40;
+                            missiles.splice(ii, 1); //Delete missile that hit asteroid
+                            asteroids[i] = temp_asteroid; //Update asteroid in array
+                            Score += 10; //Give points
+                        } else {
+                            asteroids.splice(i, 1); //Delete small asteroid from array
+                            missiles.splice(ii, 1); //Delete missile that hit asteroid
+                            Score += 20; //Give points
+
+                            asteroid = {
+                                xPos: Math.floor(50), //Generate new large asteroid at random location
+                                yPos: Math.floor(50),
+                                Length: 80,
+                                Width: 80,
+                                angle: Math.floor((Math.random() * 360) + 1)
+                            };
+
+                            asteroids[asteroids.length] = asteroid; //Add new asteroid to the array
+                        }
+                    }
+                }
+
+            }
+
+            //repaint the current details
+            rePaint();
+
+            //Call again if game is'nt over
+            if (isGameOver == false) {
+                window.setTimeout("update();", 50)
+            }
+        }
+
+
+        function rePaint() //repaints the contents to the canvas
+         {
+            //Blank the canvas
+            ctx.fillRect(0, 0, 900, 600);
+
+            //Paint the ship
+            ship_image = new Image();
+            if (Shield) {
+                ship_image.src = ShipON_Path;
+            } else {
+                ship_image.src = ShipOFF_Path;
+            }
+
+            //Buffer for rotating ship
+            var buffer = document.createElement('canvas');
+            buffer.width = buffer.height = 100;
+            var bctx = buffer.getContext('2d');
+            bctx.translate(15, 15);
+            bctx.rotate(ShipRotation * Math.PI / 180);
+            bctx.drawImage(ship_image, -15, -15, 30, 30);
+            ctx.drawImage(buffer, ShipX, ShipY);
+
+            //Print the scoreboard 
+            document.getElementById('ScoreBoard').innerHTML = "Score: " + Score + "<BR>" + "Lives: " + Lives;
+
+            //Paint the asteroids
+            asteroid_image = new Image();
+            asteroid_image.src = Asteroid_Path;
+
+            for (var i = 0; i < asteroids.length; i++) {
+                var temp_asteroid = asteroids[i];
+                ctx.drawImage(asteroid_image, temp_asteroid.xPos, temp_asteroid.yPos, temp_asteroid.Length, temp_asteroid.Width);
+            }
+
+            //Paint the missiles
+            missile_image = new Image();
+            missile_image.src = Missile_Path;
+
+            for (var i = 0; i < missiles.length; i++) {
+                var temp_missile = missiles[i];
+                ctx.drawImage(missile_image, temp_missile.xPos, temp_missile.yPos, 7, 7);
+            }
+
+        }
+
+        function KeyListener(evt) //Used to manually control the ships position and fire
+         {
+
+
+            switch (evt.keyCode) {
+            case 38:
+                /* Up arrow was pressed */
+                ShipVelocity = 10;
+                break;
+
+            case 40:
+                /* Down arrow was pressed */
+                alert("Paused");
+                break;
+
+            case 37:
+                /* Left arrow was pressed */
+                ShipRotation -= 10;
+                break;
+
+            case 39:
+                /* Right arrow was pressed */
+                ShipRotation += 10;
+                break;
+
+            case 32:
+                /*Space Bar*/
+                var missile_obj = {
+                    xPos: ShipX + 10,
+                    yPos: ShipY + 10,
+                    Angle: ShipRotation,
+                };
+
+                missiles[missiles.length] = missile_obj;
+                break;
+
+            }
+        }
+    </script>
+
+    <style>
+        canvas {
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            width: 800px;
+        }
+    </style>
+</head>
+
+<body>
+    <table>
+        <tr>
+            <td id="ScoreBoard">
+            </td>
+        </tr>
+    </table>
+    <canvas id="PlayingField" width="900" height="600">
+
+    </canvas>
+    <audio autoplay loop>
+        <source src="music.mp3">
+    </audio>
+</body>
+
+</html>
